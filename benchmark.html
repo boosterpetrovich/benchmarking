@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Benchmark test</title>
+        <script type="text/javascript">
+            class Benchmark {
+                constructor() {}
+
+                static hasPerformanceSupport() {
+                    if ('performance' in window && 'PerformanceObserver' in window) {
+                        return 1;
+                    }
+                    return 0;
+                }
+
+                static hasBeaconSupport() {
+                    if ('sendBeacon' in navigator) {
+                        return 1;
+                    }
+                    return 0;
+                }
+
+                static runBenchmark() {
+                    window.addEventListener('unload', function() {
+                        var navPerf = performance.getEntriesByType('navigation')[0];
+                        var resPerf = performance.getEntriesByName('https://cdn.connatix.com/min/connatix.renderer.infeed.min.js')[0];
+                        var data = {
+                            navStart: navPerf.startTime,
+                            navEnd: navPerf.responseEnd,
+                            networkTime: navPerf.responseEnd - navPerf.startTime,
+                            procStart: navPerf.domInteractive,
+                            procEnd: navPerf.domComplete,
+                            procTime: navPerf.domComplete - navPerf.domInteractive,
+                            loadTime: navPerf.domComplete - navPerf.startTime,
+                            resStart: resPerf.startTime,
+                            resEnd: resPerf.responseEnd
+                        }
+                        let result = new FormData();
+                        result.append('entries', JSON.stringify( result ));
+                        navigator.sendBeacon('http://boosterpetrovich.com/beacons', result);
+                        console.log(result);
+                    }, false);
+                }
+            }
+        </script>
+    </head>
+    <body>
+        <div>
+            Test page. Content goes here
+        </div>
+        <script type="text/javascript">
+            function loadScript (url, props) {
+                script = document.createElement('script');
+                script.async = false;
+                script.src = url;
+
+                Object.keys(props || {}).forEach(function (key) { script.setAttribute(key, props[key]); });
+
+                (document.head || document.getElementsByTagName('head')[0]).appendChild(script);
+            }
+            loadScript('https://cdn.connatix.com/min/connatix.renderer.infeed.min.js', {
+                'data-connatix-token': '1b730f9d-3ba0-4124-a12b-00514adbaf57',
+            });
+        </script>
+        <script type="text/javascript">
+            if( Benchmark.hasPerformanceSupport() && Benchmark.hasBeaconSupport() ) {
+                Benchmark.runBenchmark();
+            }
+        </script>
+
+    </body>
+</html>
