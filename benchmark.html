@@ -4,6 +4,17 @@
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>Benchmark test</title>
+        <style media="screen">
+            #video {
+                width: 300px;
+                height: 200px;
+                position: fixed;
+                right: 0;
+                bottom: 0;
+                background: #2e2e2e;
+                color: #fff;
+            }
+        </style>
         <script type="text/javascript">
             class Benchmark {
                 constructor() {}
@@ -24,8 +35,9 @@
 
                 static runBenchmark() {
                     window.addEventListener('unload', function() {
-                        var navPerf = performance.getEntriesByType('navigation')[0];
-                        var resPerf = performance.getEntriesByName('https://cdn.connatix.com/min/connatix.renderer.infeed.min.js')[0];
+                        let navPerf = performance.getEntriesByType('navigation')[0];
+                        let resPerf = performance.getEntriesByName('https://cdn.connatix.com/min/connatix.renderer.infeed.min.js')[0];
+                        let videoElAppeared = performance.getEntriesByName('videoElAppeared')[0];
                         var data = {
                             navStart: navPerf.startTime,
                             navEnd: navPerf.responseEnd,
@@ -35,40 +47,67 @@
                             procTime: navPerf.domComplete - navPerf.domInteractive,
                             loadTime: navPerf.domComplete - navPerf.startTime,
                             resStart: resPerf.startTime,
-                            resEnd: resPerf.responseEnd
+                            resEnd: resPerf.responseEnd,
+                            videoDOM: videoElAppeared.startTime
                         }
                         let result = new FormData();
                         result.append('entries', JSON.stringify( result ));
                         navigator.sendBeacon('http://boosterpetrovich.com/beacons', result);
-                        console.log(result);
                     }, false);
                 }
             }
         </script>
     </head>
     <body>
-        <div>
-            Test page. Content goes here
+        <div class="wrapper">
+            <div id="content">
+                Test page. Content goes here
+            </div>
+            <script type="text/javascript">
+                function loadScript (url, props) {
+                    script = document.createElement('script');
+                    script.async = false;
+                    script.src = url;
+
+                    Object.keys(props || {}).forEach(function (key) { script.setAttribute(key, props[key]); });
+
+                    (document.head || document.getElementsByTagName('head')[0]).appendChild(script);
+                }
+                loadScript('https://cdn.connatix.com/min/connatix.renderer.infeed.min.js', {
+                    'data-connatix-token': '1b730f9d-3ba0-4124-a12b-00514adbaf57',
+                });
+            </script>
+            <script type="text/javascript">
+                // run benchmark
+                if( Benchmark.hasPerformanceSupport() && Benchmark.hasBeaconSupport() ) {
+                    Benchmark.runBenchmark();
+
+                    // show a test instance of a video player on the page
+                    setTimeout(function() {
+                        var newItem = document.createElement('div');
+                        var textnode = document.createTextNode('video player');
+                        newItem.id = 'video';
+                        newItem.appendChild(textnode);
+                        var list = document.getElementById('content');
+                        list.insertBefore(newItem, list.childNodes[0]);
+                    }, 3000);
+
+                    // create DOM observer
+                    const targetNode = document.getElementById('content');
+                    const config = { childList: true };
+                    const callback = function(mutationsList, observer) {
+                        for(let mutation of mutationsList) {
+                            if (mutation.type === 'childList') {
+                                performance.mark('videoElAppeared');
+                                observer.disconnect();
+                            }
+                        }
+                    };
+                    const observer = new MutationObserver(callback);
+                    observer.observe(targetNode, config);
+
+                }
+            </script>
         </div>
-        <script type="text/javascript">
-            function loadScript (url, props) {
-                script = document.createElement('script');
-                script.async = false;
-                script.src = url;
-
-                Object.keys(props || {}).forEach(function (key) { script.setAttribute(key, props[key]); });
-
-                (document.head || document.getElementsByTagName('head')[0]).appendChild(script);
-            }
-            loadScript('https://cdn.connatix.com/min/connatix.renderer.infeed.min.js', {
-                'data-connatix-token': '1b730f9d-3ba0-4124-a12b-00514adbaf57',
-            });
-        </script>
-        <script type="text/javascript">
-            if( Benchmark.hasPerformanceSupport() && Benchmark.hasBeaconSupport() ) {
-                Benchmark.runBenchmark();
-            }
-        </script>
-
     </body>
 </html>
