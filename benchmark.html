@@ -5,14 +5,12 @@
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>Benchmark test</title>
         <style media="screen">
-            #video {
+            #connatix-player {
                 width: 300px;
                 height: 200px;
                 position: fixed;
                 right: 0;
                 bottom: 0;
-                background: #2e2e2e;
-                color: #fff;
             }
         </style>
         <script type="text/javascript">
@@ -49,9 +47,14 @@
                             resStart: resPerf.startTime,
                             resEnd: resPerf.responseEnd,
                             videoDOM: videoElAppeared.startTime
+                        };
+                        let uiMarks = performance.getEntriesByType('mark');
+                        for (var i = 0; i < uiMarks.length; i++) {
+                            let item = uiMarks[i];
+                            data[item.name] = item.startTime;
                         }
                         let result = new FormData();
-                        result.append('entries', JSON.stringify( result ));
+                        result.append('entries', JSON.stringify( data ));
                         navigator.sendBeacon('http://boosterpetrovich.com/beacons', result);
                     }, false);
                 }
@@ -63,37 +66,41 @@
             <div id="content">
                 Test page. Content goes here
             </div>
+            <div id="connatix-player"></div>
             <script type="text/javascript">
-                function loadScript (url, props) {
-                    script = document.createElement('script');
-                    script.async = false;
-                    script.src = url;
+              settings = {}
+              window["cnxExternalInterface"] = function(player) {
+                window.player = player;
+                player
+                .on('ready', function(data) {
+                    performance.mark('playerReady');
+                })
+                .on('play', function(data) {
+                    performance.mark('playerPlay');
+                })
+                .on('readMore', function(data) {
+                    var link = JSON.stringify(data.link);
+                    var markOnRead = performance.mark('clickedReadMore_' + JSON.parse(link));
+                  window.open(data.link, '_self');
+                }).init(settings);
+              };
 
-                    Object.keys(props || {}).forEach(function (key) { script.setAttribute(key, props[key]); });
-
-                    (document.head || document.getElementsByTagName('head')[0]).appendChild(script);
-                }
-                loadScript('https://cdn.connatix.com/min/connatix.renderer.infeed.min.js', {
-                    'data-connatix-token': '1b730f9d-3ba0-4124-a12b-00514adbaf57',
-                });
+              (function(cnxwindow, cnxdocument, container, token, callback) {
+                var s = cnxdocument.createElement('script');
+                s.async = 1;
+                s.src = 'https://cdn.connatix.com/min/connatix.renderer.infeed.min.js';
+                s.setAttribute('data-connatix-token', token);
+                s.setAttribute('hdc', 'true');
+                s.setAttribute('ext-interface-callback', callback);
+                container.appendChild(s);
+              })(window, document, document.getElementById('connatix-player'), '6f2d5148-01a0-451e-9cf7-7dd7b5798474', 'cnxExternalInterface');
             </script>
             <script type="text/javascript">
                 // run benchmark
                 if( Benchmark.hasPerformanceSupport() && Benchmark.hasBeaconSupport() ) {
                     Benchmark.runBenchmark();
-
-                    // show a test instance of a video player on the page
-                    setTimeout(function() {
-                        var newItem = document.createElement('div');
-                        var textnode = document.createTextNode('video player');
-                        newItem.id = 'video';
-                        newItem.appendChild(textnode);
-                        var list = document.getElementById('content');
-                        list.insertBefore(newItem, list.childNodes[0]);
-                    }, 3000);
-
                     // create DOM observer
-                    const targetNode = document.getElementById('content');
+                    const targetNode = document.getElementById('connatix-player');
                     const config = { childList: true };
                     const callback = function(mutationsList, observer) {
                         for(let mutation of mutationsList) {
@@ -105,7 +112,6 @@
                     };
                     const observer = new MutationObserver(callback);
                     observer.observe(targetNode, config);
-
                 }
             </script>
         </div>
